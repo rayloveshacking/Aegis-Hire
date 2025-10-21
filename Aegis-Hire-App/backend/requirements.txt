@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+google-generativeai
+pydantic
+PyPDF2
+supabase
+langchain
+langchain-google-genai
+python-multipart
+websockets

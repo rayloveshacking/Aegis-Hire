@@ -1,0 +1,28 @@
+John Doe
+Senior Software Engineer
+Email: john.doe@example.com
+Phone: (123) 456-7890
+
+Summary:
+Experienced software engineer with 5+ years of experience in full-stack development. 
+Specialized in JavaScript, Python, and cloud technologies.
+
+Experience:
+Senior Software Engineer
+ABC Tech, Jan 2020 - Present
+- Led development of microservices architecture
+- Implemented CI/CD pipelines
+- Mentored junior developers
+
+Software Engineer
+XYZ Corp, Jun 2017 - Dec 2019
+- Developed REST APIs
+- Created responsive web applications
+- Collaborated with cross-functional teams
+
+Education:
+Bachelor of Science in Computer Science
+University of Technology, 2013 - 2017
+
+Skills:
+JavaScript, Python, React, Node.js, AWS, Docker, Kubernetes, SQL, MongoDB
