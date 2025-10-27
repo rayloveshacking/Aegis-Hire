@@ -5,7 +5,8 @@ google-generativeai
 pydantic
 PyPDF2
 supabase
-langchain
-langchain-google-genai
+langchain==1.0.2
+langchain-google-genai==3.0.0
 python-multipart
 websockets
+langchain-core==1.0.1

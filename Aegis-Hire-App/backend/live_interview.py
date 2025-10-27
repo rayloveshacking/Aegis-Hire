@@ -8,12 +8,14 @@ from dotenv import load_dotenv
 import asyncio
 import json
 from enum import Enum
+from interview_moderator import InterviewModerator
+
 
 # Load environment variables
 load_dotenv()
 
 # Configure the Gemini API key
-api_key = os.getenv("GEMINI_API_KEY")
+api_key = os.getenv("GOOGLE_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
@@ -23,6 +25,7 @@ class InterviewEventType(str, Enum):
     TOPIC_TRACKER = "topic_tracker"
     BIAS_INTERRUPTER = "bias_interrupter"
     AUTOMATIC_SCRIBE = "automatic_scribe"
+    INTERVIEW_MODERATOR = "interview_moderator"
 
 
 class InterviewEvent(BaseModel):
@@ -46,6 +49,7 @@ class LiveInterviewService:
         self.transcript_parts: Dict[str, List[str]] = {}
         # Track analysis triggers to avoid excessive API calls
         self.analysis_triggers: Dict[str, Dict[str, int]] = {}
+        self.moderator = InterviewModerator()
 
     async def process_transcript_chunk(
         self, interview_session_id: str, transcript_chunk: str, job_description: str
@@ -87,6 +91,10 @@ class LiveInterviewService:
             await self._detect_potential_bias(interview_session_id, full_transcript)
         )
 
+        events.extend(
+            await self._get_moderator_feedback(interview_session_id, full_transcript)
+        )
+
         # The AUTOMATIC_SCRIBE event is removed to avoid sending the entire (and growing)
         # transcript back to the frontend with every message. The frontend
         # was ignoring this event anyway.
@@ -102,6 +110,26 @@ class LiveInterviewService:
         for event in events:
             print(f"  - {event.event_type}: {event.message[:50]}...")
 
+        return events
+
+    async def _get_moderator_feedback(
+        self, interview_session_id: str, transcript: str
+    ) -> List[InterviewEvent]:
+        """
+        Generate feedback from the interview moderator.
+        """
+        events = []
+        feedback = self.moderator.generate_feedback(transcript)
+        if feedback:
+            feedback_event = InterviewEvent(
+                id=str(uuid.uuid4()),
+                interview_session_id=interview_session_id,
+                event_type=InterviewEventType.INTERVIEW_MODERATOR,
+                message=feedback,
+                timestamp=datetime.now(),
+                metadata={"source": "InterviewModerator"},
+            )
+            events.append(feedback_event)
         return events
 
     async def _analyze_talk_ratio(

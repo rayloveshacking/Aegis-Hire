@@ -567,88 +567,7 @@ Candidate: I'm comfortable with EC2, RDS, S3, and Lambda. I've deployed applicat
   );
 };
 
-// --- DEMO MODE CONSTANTS ---
-
-const HARDCODED_NUDGES = [
-  {
-    time: 5000,
-    message:
-      "BIAS INTERRUPTER: Asking about personal family status is inappropriate and potentially illegal. Focus on job-related qualifications instead.",
-  },
-  {
-    time: 6000,
-    message:
-      "TALK RATIO MONITOR: You've been speaking for too long. Allow the candidate more time to respond and showcase their skills.",
-  },
-  {
-    time: 13000,
-    message:
-      "BIAS INTERRUPTER: Comments about hiring 'younger guys' constitute age and gender discrimination. This could expose the company to legal liability.",
-  },
-  {
-    time: 17000,
-    message:
-      "BIAS INTERRUPTER: Questions about marital status, pregnancy, and living arrangements are prohibited by employment law. Redirect to job-relevant topics.",
-  },
-  {
-    time: 21000,
-    message:
-      "BIAS INTERRUPTER: Making assumptions about client preferences based on gender is discriminatory. Focus on the candidate's technical abilities.",
-  },
-  {
-    time: 25000,
-    message:
-      "TOPIC TRACKER: You haven't discussed Kubernetes yet, which is a key requirement in the job description. Consider asking about container orchestration experience.",
-  },
-  {
-    time: 29000,
-    message:
-      "TALK RATIO MONITOR: The candidate is giving brief responses because you're dominating the conversation. Ask open-ended technical questions.",
-  },
-  {
-    time: 33000,
-    message:
-      "TOPIC TRACKER: Still no discussion of Kubernetes, Docker orchestration, or cloud architecture best practices. These are critical job requirements.",
-  },
-  {
-    time: 37000,
-    message:
-      "BIAS INTERRUPTER: Questioning someone's seniority level in a condescending manner creates a hostile interview environment.",
-  },
-];
-
-const SIMULATED_TRANSCRIPT = [
-  // --- CHUNK 1: Bad opening - too long, biased language, unprofessional ---
-  "Okay, let's get started. I'm running a bit late today, had a rough night with the kids, you know how it is. Anyway, looking at your resume here... Sarah, right? That's a nice name. So you're applying for our Senior Software Engineer position. I'll be honest, we usually hire younger guys for this role since it's pretty demanding and requires a lot of energy. The startup life isn't for everyone, especially if you have family obligations or other distractions at home. We work long hours here, sometimes until midnight, and we need people who can keep up. I mean, look at me, I'm the CTO and I'm still coding at 2 AM most nights. That's just the culture here. So tell me, are you single? Married? Any kids? Because that really affects whether someone can commit to our fast-paced environment.",
-
-  // --- CHUNK 2: Candidate's professional response ---
-  "I appreciate you sharing about the company culture. I'm very committed to my career and have successfully managed demanding projects throughout my six years of experience. I'd prefer to focus our discussion on the technical aspects of the role and how my skills align with your needs.",
-
-  // --- CHUNK 3: Interviewer continues with inappropriate questions ---
-  "Right, right, but I need to know what I'm dealing with here. Look, I've hired women before and they always end up leaving when they get pregnant or their husband gets transferred or whatever. It's just business reality. How old are you anyway? You look pretty young, but sometimes it's hard to tell with women, you know? And what about your living situation? Do you live alone or with roommates? Because we sometimes have last-minute travel requirements and I need to know you can just drop everything and go.",
-
-  // --- CHUNK 4: Candidate deflects professionally ---
-  "I'm fully committed to my professional responsibilities and have always met my work obligations. Could we discuss the technical stack you're using? I have extensive experience with Python, Django, and AWS services that seems relevant to this position.",
-
-  // --- CHUNK 5: More problematic interviewer behavior ---
-  "Yeah, yeah, we'll get to the tech stuff. But first, let me tell you what we're really looking for. We need someone who fits our team culture. We're all young professionals here, mostly guys, and we like to hang out after work, grab beers, maybe hit up some clubs on weekends. It's important that our engineers can bond with the team, you know? Also, just between you and me, some of our clients are pretty old-fashioned and they prefer working with male engineers. It's not my fault, that's just how business works. So can you handle working in that kind of environment?",
-
-  // --- CHUNK 6: Candidate stays professional ---
-  "I'm confident in my ability to work effectively with diverse teams and clients. My technical skills and professional experience speak for themselves. I've successfully collaborated with teams of all sizes and backgrounds throughout my career.",
-
-  // --- CHUNK 7: Finally some technical content, but still problematic ---
-  "Okay, fine, let's talk tech then. We use Python, obviously, Django for the web stuff, PostgreSQL for the database, and we deploy everything on AWS. Pretty standard stuff. We also use Git, I assume you know that. Docker containers, microservices architecture, the usual buzzwords. Oh, and we do agile development with two-week sprints. Nothing too complicated. I mean, if you can't handle this level of complexity, you probably shouldn't be applying for senior positions anyway. So what do you think? Can you handle working with real enterprise-level code, or are you more of a junior developer pretending to be senior?",
-
-  // --- CHUNK 8: Candidate demonstrates knowledge ---
-  "I have extensive experience with all those technologies. I've built and maintained microservices architectures using Python and Django, managed PostgreSQL databases with complex schemas, and have deep experience with AWS services including EC2, RDS, S3, and Lambda. I've also worked with containerization using Docker and have experience with CI/CD pipelines.",
-
-  // --- CHUNK 9: Interviewer wraps up poorly ---
-  "Well, that sounds okay I guess. Look, I'll be honest with you Sarah, you seem nice enough, but I'm not sure you're tough enough for our startup environment. This isn't some cushy corporate job where you can coast. We need warriors here, people who eat code for breakfast and don't complain when things get difficult. But hey, HR makes me interview everyone, so here we are. Any questions for me? And please don't ask about work-life balance or vacation days or any of that stuff. We're building something important here.",
-];
-
-const SIMULATION_INTERVAL = 4000; // 4 seconds for a more realistic pace
-
-// --- Phase 2: Live Interview Moderator (DEMO MODE) ---
+// --- Phase 2: Live Interview Moderator ---
 
 const LiveInterviewModerator = () => {
   // --- State Management ---
@@ -662,17 +581,13 @@ const LiveInterviewModerator = () => {
   );
   const [error, setError] = useState<string | null>(null);
 
-  // --- Refs for managing WebSocket and the simulation timer ---
+  // --- Refs for managing WebSocket and SpeechRecognition ---
   const ws = useRef<WebSocket | null>(null);
-  const simulationTimer = useRef<NodeJS.Timeout | null>(null);
-  const transcriptIndex = useRef(0);
-  const nudgeTimers = useRef<NodeJS.Timeout[]>([]);
+  const recognition = useRef<SpeechRecognition | null>(null);
 
   const handleNudge = (nudgeData: string) => {
     try {
       const data = JSON.parse(nudgeData);
-      // We don't want to show the automatic scribe as a "nudge".
-      // This event is more for logging or other backend processes.
       if (data.event_type === "automatic_scribe") {
         return;
       }
@@ -697,10 +612,8 @@ const LiveInterviewModerator = () => {
     setTranscript("");
     setNudges([]);
     setError(null);
-    transcriptIndex.current = 0;
 
     const sessionId = "session_demo_" + Math.random().toString(36).substr(2, 9);
-    // CORRECTED IP ADDRESS
     ws.current = new WebSocket(`ws://127.0.0.1:8000/ws/interview/${sessionId}`);
 
     ws.current.onopen = () => console.log("WebSocket connection established.");
@@ -726,62 +639,61 @@ const LiveInterviewModerator = () => {
     ws.current = null;
   };
 
-  // --- DEMO MODE Simulation Logic ---
+  // --- Speech Recognition Logic ---
   const startRecording = () => {
-    if (isRecording) return;
-    setIsRecording(true);
-    setError(null);
-    setTranscript("Simulation started... \n\n");
-    setNudges([]); // Clear previous nudges
-
-    // Start hardcoded nudges at specific times
-    HARDCODED_NUDGES.forEach(({ time, message }) => {
-      const timer = setTimeout(() => {
-        setNudges((prev) => [...prev, message]);
-      }, time);
-      nudgeTimers.current.push(timer);
-    });
-
-    // Start a timer to feed the simulated transcript
-    simulationTimer.current = setInterval(() => {
-      if (transcriptIndex.current >= SIMULATED_TRANSCRIPT.length) {
-        setTranscript((prev) => prev + "\n\n--- End of Simulation ---");
-        stopRecording();
-        return;
-      }
-
-      const chunk = SIMULATED_TRANSCRIPT[transcriptIndex.current];
-
-      // Update the UI and send the *full* transcript to the backend
-      setTranscript((currentTranscript) => {
-        const newTranscript = currentTranscript + chunk + "\n\n";
-        if (ws.current?.readyState === WebSocket.OPEN) {
-          console.log("Sending full transcript to backend...");
-          ws.current.send(newTranscript);
-        }
-        return newTranscript;
-      });
-
-      transcriptIndex.current++;
-    }, SIMULATION_INTERVAL);
+    if (recognition.current) {
+      recognition.current.start();
+      setIsRecording(true);
+    }
   };
 
   const stopRecording = () => {
-    if (simulationTimer.current) {
-      clearInterval(simulationTimer.current);
-      simulationTimer.current = null;
+    if (recognition.current) {
+      recognition.current.stop();
+      setIsRecording(false);
     }
-    // Clear all nudge timers
-    nudgeTimers.current.forEach((timer) => clearTimeout(timer));
-    nudgeTimers.current = [];
-    setIsRecording(false);
-    console.log("Simulation stopped.");
   };
 
   // --- Lifecycle Hook for Cleanup ---
   useEffect(() => {
+    const SpeechRecognitionAPI =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognitionAPI) {
+      recognition.current = new SpeechRecognitionAPI();
+      recognition.current.continuous = true;
+      recognition.current.interimResults = true;
+      recognition.current.lang = "en-US";
+
+      recognition.current.onresult = (event: SpeechRecognitionEvent) => {
+        let final_transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            final_transcript += event.results[i][0].transcript;
+          }
+        }
+
+        if (final_transcript) {
+          setTranscript((prev) => prev + final_transcript);
+          if (ws.current?.readyState === WebSocket.OPEN) {
+            ws.current.send(final_transcript);
+          }
+        }
+      };
+
+      recognition.current.onerror = (event: Event) => {
+        console.error("Speech recognition error", event);
+        setError(
+          "Speech recognition error. Please check your microphone and browser permissions.",
+        );
+      };
+    } else {
+      setError(
+        "Speech recognition not supported in this browser. Please use Chrome or Firefox.",
+      );
+    }
+
     return () => {
-      stopRecording();
+      recognition.current?.stop();
       if (ws.current) {
         ws.current.close();
       }
@@ -797,7 +709,6 @@ const LiveInterviewModerator = () => {
         <CardTitle>Live Interview Moderator</CardTitle>
       </div>
       <p className="text-gray-600 mb-6 text-sm sm:text-base">
-        This is a simulation to demonstrate the AI Nudge functionality.
         Real-time bias detection and interview coaching.
       </p>
 
@@ -912,7 +823,7 @@ const LiveInterviewModerator = () => {
                       {transcript || (
                         <div className="text-gray-500 italic text-center py-8">
                           <div className="mb-3 text-2xl">🎤</div>
-                          Start recording to begin the simulation...
+                          Start recording to begin the interview...
                         </div>
                       )}
                     </div>
